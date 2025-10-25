@@ -288,8 +288,8 @@
                 }
 
                 const currentRoute = window.location.pathname.split('/').pop();
-                const hasAccess = AppRouter.hasAccessToRoute(currentRoute);
                 const userRole = AppRouter.getCurrentRole();
+                const hasAccess = AppRouter.hasAccessToRoute(currentRoute, userRole);
                 const navigationMenu = AppRouter.getNavigationMenu();
 
                 output('routingOutput', 

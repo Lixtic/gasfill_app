@@ -151,7 +151,7 @@
             let html = `<h3>Route Access for ${AppRouter.getRoleDisplayName(currentRole)}</h3>`;
             
             routes.forEach(route => {
-                const hasAccess = AppRouter.hasAccessToRoute(route);
+                const hasAccess = AppRouter.hasAccessToRoute(route, currentRole);
                 const routeInfo = AppRouter.ROUTES[route];
                 html += `
                     <div class="result">

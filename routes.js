@@ -266,10 +266,102 @@ class AppRouter {
         
         return availableRoutes;
     }
+    
+    // Get current user's role
+    getCurrentRole() {
+        return this.currentUser?.role || 'guest';
+    }
+    
+    // Get navigation menu items for current user
+    getNavigationMenu() {
+        const userRole = this.getCurrentRole();
+        const routes = this.getUserRoutes();
+        
+        // Convert routes object to menu array
+        const menu = Object.entries(routes).map(([key, route]) => ({
+            key,
+            route,
+            label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')
+        }));
+        
+        return menu;
+    }
+    
+    // Check if user can perform a specific action
+    canPerformAction(action) {
+        const userRole = this.getCurrentRole();
+        
+        // Define action permissions
+        const actionPermissions = {
+            canOrder: ['customer', 'admin'],
+            canManageUsers: ['admin'],
+            canManageOrders: ['admin'],
+            canAcceptServices: ['rider', 'admin'],
+            canViewEarnings: ['rider', 'admin'],
+            canViewAnalytics: ['admin']
+        };
+        
+        const allowedRoles = actionPermissions[action] || [];
+        return allowedRoles.includes(userRole);
+    }
+    
+    // Get display name for a role
+    getRoleDisplayName(role) {
+        const roleNames = {
+            customer: 'Customer',
+            rider: 'Rider',
+            admin: 'Administrator',
+            guest: 'Guest',
+            public: 'Public'
+        };
+        return roleNames[role] || role;
+    }
+    
+    // Get default route for current user
+    getDefaultRoute() {
+        const userRole = this.getCurrentRole();
+        return DEFAULT_ROUTES[userRole] || ROUTES.public.login;
+    }
+    
+    // Get breadcrumb for current route
+    getBreadcrumb() {
+        const currentPath = window.location.pathname.split('/').pop();
+        const hash = window.location.hash.substring(1);
+        
+        const breadcrumb = [];
+        
+        // Add home
+        breadcrumb.push({
+            label: 'Home',
+            route: this.getDefaultRoute()
+        });
+        
+        // Add current page if not home
+        if (currentPath && currentPath !== 'index.html') {
+            breadcrumb.push({
+                label: currentPath.replace('.html', '').replace(/_/g, ' '),
+                route: currentPath
+            });
+        }
+        
+        // Add hash section if present
+        if (hash) {
+            breadcrumb.push({
+                label: hash.replace(/-/g, ' '),
+                route: `${currentPath}#${hash}`
+            });
+        }
+        
+        return breadcrumb;
+    }
 }
 
 // Initialize global router
 window.AppRouter = new AppRouter();
+
+// Also expose ROUTES and ROLE_PERMISSIONS globally for testing/debugging
+window.ROUTES = ROUTES;
+window.ROLE_PERMISSIONS = ROLE_PERMISSIONS;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
