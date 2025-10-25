@@ -52,6 +52,7 @@ const ROUTES = {
 
 // User role hierarchy and permissions
 const ROLE_PERMISSIONS = {
+    guest: ['public'],
     customer: ['customer', 'public'],
     rider: ['rider', 'public'],
     admin: ['admin', 'customer', 'rider', 'public']
@@ -59,10 +60,24 @@ const ROLE_PERMISSIONS = {
 
 // Default routes for each role
 const DEFAULT_ROUTES = {
+    guest: ROUTES.public.login,
     customer: ROUTES.customer.dashboard,
     rider: ROUTES.rider.dashboard,
     admin: ROUTES.admin.dashboard
 };
+
+// Action permissions for role-based access control
+const ACTION_PERMISSIONS = {
+    canOrder: ['customer', 'admin'],
+    canManageUsers: ['admin'],
+    canManageOrders: ['admin'],
+    canAcceptServices: ['rider', 'admin'],
+    canViewEarnings: ['rider', 'admin'],
+    canViewAnalytics: ['admin']
+};
+
+// Constants
+const DEFAULT_INDEX_FILE = 'index.html';
 
 // Routing utility class
 class AppRouter {
@@ -290,18 +305,7 @@ class AppRouter {
     // Check if user can perform a specific action
     canPerformAction(action) {
         const userRole = this.getCurrentRole();
-        
-        // Define action permissions
-        const actionPermissions = {
-            canOrder: ['customer', 'admin'],
-            canManageUsers: ['admin'],
-            canManageOrders: ['admin'],
-            canAcceptServices: ['rider', 'admin'],
-            canViewEarnings: ['rider', 'admin'],
-            canViewAnalytics: ['admin']
-        };
-        
-        const allowedRoles = actionPermissions[action] || [];
+        const allowedRoles = ACTION_PERMISSIONS[action] || [];
         return allowedRoles.includes(userRole);
     }
     
@@ -320,7 +324,7 @@ class AppRouter {
     // Get default route for current user
     getDefaultRoute() {
         const userRole = this.getCurrentRole();
-        return DEFAULT_ROUTES[userRole] || ROUTES.public.login;
+        return DEFAULT_ROUTES[userRole] || ROUTES?.public?.login || 'app.html#login';
     }
     
     // Get breadcrumb for current route
@@ -337,7 +341,7 @@ class AppRouter {
         });
         
         // Add current page if not home
-        if (currentPath && currentPath !== 'index.html') {
+        if (currentPath && currentPath !== DEFAULT_INDEX_FILE) {
             breadcrumb.push({
                 label: currentPath.replace('.html', '').replace(/_/g, ' '),
                 route: currentPath
