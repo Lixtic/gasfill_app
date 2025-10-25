@@ -36,8 +36,8 @@ def install_dependencies():
 def start_server():
     """Start the FastAPI server"""
     print("🚀 Starting GasFill Python Backend Server...")
-    print("📊 API Documentation will be available at: http://localhost:5000/api/docs")
-    print("🔄 Health Check: http://localhost:5000/api/health")
+    print("📊 API Documentation will be available at: http://localhost:5002/api/docs")
+    print("🔄 Health Check: http://localhost:5002/api/health")
     print("🛑 Press Ctrl+C to stop the server")
     print("-" * 60)
     
@@ -47,8 +47,8 @@ def start_server():
         uvicorn.run(
             "python_server:app",
             host="0.0.0.0",
-            port=5000,
-            reload=True,
+            port=5002,
+            reload=False,
             log_level="info",
             access_log=True
         )

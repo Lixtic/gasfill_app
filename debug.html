@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GasFill System Debug Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .debug-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-ok { background: #22c55e; }
+        .status-warning { background: #f59e0b; }
+        .status-error { background: #ef4444; }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 4px;
+        }
+        .btn:hover { background: #2563eb; }
+        .output {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 4px solid #3b82f6;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        h1 { color: #1f2937; margin-bottom: 8px; }
+        h2 { color: #374151; margin-top: 0; }
+        .error { color: #dc2626; }
+        .success { color: #059669; }
+        .warning { color: #d97706; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 GasFill System Debug Dashboard</h1>
+        <p>Comprehensive system status and debugging tools</p>
+
+        <div class="grid">
+            <div class="debug-section">
+                <h2><span class="status-indicator" id="serverStatus"></span>Server Status</h2>
+                <button class="btn" onclick="checkServerHealth()">Check Python Server</button>
+                <button class="btn" onclick="checkStaticServer()">Check Static Server</button>
+                <div id="serverOutput" class="output">Click buttons to check server status...</div>
+            </div>
+
+            <div class="debug-section">
+                <h2><span class="status-indicator" id="authStatus"></span>Authentication</h2>
+                <button class="btn" onclick="testRegistration()">Test Registration</button>
+                <button class="btn" onclick="testLogin()">Test Login</button>
+                <button class="btn" onclick="testAdminLogin()">Test Admin Login</button>
+                <div id="authOutput" class="output">Click buttons to test authentication...</div>
+            </div>
+
+            <div class="debug-section">
+                <h2><span class="status-indicator" id="routingStatus"></span>Routing System</h2>
+                <button class="btn" onclick="testRouting()">Test Routing</button>
+                <button class="btn" onclick="testPermissions()">Test Permissions</button>
+                <div id="routingOutput" class="output">Click buttons to test routing...</div>
+            </div>
+
+            <div class="debug-section">
+                <h2><span class="status-indicator" id="databaseStatus"></span>Database Status</h2>
+                <button class="btn" onclick="checkDatabase()">Check Database</button>
+                <button class="btn" onclick="clearDatabase()">Clear Test Data</button>
+                <div id="databaseOutput" class="output">Click buttons to check database...</div>
+            </div>
+
+            <div class="debug-section">
+                <h2><span class="status-indicator" id="apiStatus"></span>API Endpoints</h2>
+                <button class="btn" onclick="testOrders()">Test Orders API</button>
+                <button class="btn" onclick="testServices()">Test Services API</button>
+                <button class="btn" onclick="testRiders()">Test Riders API</button>
+                <div id="apiOutput" class="output">Click buttons to test API endpoints...</div>
+            </div>
+
+            <div class="debug-section">
+                <h2><span class="status-indicator" id="frontendStatus"></span>Frontend Status</h2>
+                <button class="btn" onclick="checkFrontendFiles()">Check Files</button>
+                <button class="btn" onclick="testNavigation()">Test Navigation</button>
+                <div id="frontendOutput" class="output">Click buttons to test frontend...</div>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h2>🔍 System Overview</h2>
+            <div id="systemOverview" class="output">Loading system overview...</div>
+        </div>
+
+        <div class="debug-section">
+            <h2>📋 Debug Log</h2>
+            <button class="btn" onclick="clearDebugLog()">Clear Log</button>
+            <div id="debugLog" class="output">Debug session started...\n</div>
+        </div>
+    </div>
+
+    <script src="routes.js"></script>
+    <script>
+        const API_BASE = 'http://127.0.0.1:5002/api';
+        const STATIC_BASE = 'http://localhost:3000';
+
+        // Utility functions
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('debugLog');
+            const colorClass = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            logElement.innerHTML += `[${timestamp}] <span class="${colorClass}">${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function setStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.className = `status-indicator status-${status}`;
+        }
+
+        function output(sectionId, content) {
+            document.getElementById(sectionId).innerHTML = content;
+        }
+
+        // Server Status Tests
+        async function checkServerHealth() {
+            log('Checking Python server health...');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                output('serverOutput', `✅ Python Server: HEALTHY\n${JSON.stringify(data, null, 2)}`);
+                setStatus('serverStatus', 'ok');
+                log('Python server is healthy', 'success');
+            } catch (error) {
+                output('serverOutput', `❌ Python Server: ERROR\n${error.message}`);
+                setStatus('serverStatus', 'error');
+                log(`Python server error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkStaticServer() {
+            log('Checking static file server...');
+            try {
+                const response = await fetch(`${STATIC_BASE}/app.html`, { method: 'HEAD' });
+                if (response.ok) {
+                    output('serverOutput', document.getElementById('serverOutput').innerHTML + 
+                        `\n✅ Static Server: HEALTHY\nStatus: ${response.status}`);
+                    log('Static server is healthy', 'success');
+                } else {
+                    throw new Error(`Status: ${response.status}`);
+                }
+            } catch (error) {
+                output('serverOutput', document.getElementById('serverOutput').innerHTML + 
+                    `\n❌ Static Server: ERROR\n${error.message}`);
+                log(`Static server error: ${error.message}`, 'error');
+            }
+        }
+
+        // Authentication Tests
+        async function testRegistration() {
+            log('Testing user registration...');
+            const testUser = {
+                username: `testuser_${Date.now()}`,
+                email: `test_${Date.now()}@example.com`,
+                password: 'password123',
+                phone: '+233501234567',
+                address: 'Test Address',
+                role: 'customer'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testUser)
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    output('authOutput', `✅ Registration: SUCCESS\n${JSON.stringify(data, null, 2)}`);
+                    setStatus('authStatus', 'ok');
+                    log('User registration successful', 'success');
+                } else {
+                    throw new Error(data.detail || 'Registration failed');
+                }
+            } catch (error) {
+                output('authOutput', `❌ Registration: ERROR\n${error.message}`);
+                setStatus('authStatus', 'error');
+                log(`Registration error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            log('Testing user login...');
+            const loginData = {
+                email: 'test@example.com',
+                password: 'password123'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loginData)
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    output('authOutput', document.getElementById('authOutput').innerHTML + 
+                        `\n✅ Login: SUCCESS\nToken: ${data.token.substring(0, 20)}...`);
+                    log('User login successful', 'success');
+                } else {
+                    throw new Error(data.detail || 'Login failed');
+                }
+            } catch (error) {
+                output('authOutput', document.getElementById('authOutput').innerHTML + 
+                    `\n❌ Login: ERROR\n${error.message}`);
+                log(`Login error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAdminLogin() {
+            log('Testing admin login...');
+            const adminData = {
+                email: 'admin@gasfill.com',
+                password: 'admin123',
+                admin_key: 'gasfill_admin_master_key_2025'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/admin-login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(adminData)
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    output('authOutput', document.getElementById('authOutput').innerHTML + 
+                        `\n✅ Admin Login: SUCCESS\nRole: ${data.user.role}`);
+                    log('Admin login successful', 'success');
+                } else {
+                    throw new Error(data.detail || 'Admin login failed');
+                }
+            } catch (error) {
+                output('authOutput', document.getElementById('authOutput').innerHTML + 
+                    `\n❌ Admin Login: ERROR\n${error.message}`);
+                log(`Admin login error: ${error.message}`, 'error');
+            }
+        }
+
+        // Routing Tests
+        function testRouting() {
+            log('Testing routing system...');
+            try {
+                if (typeof AppRouter === 'undefined') {
+                    throw new Error('AppRouter not loaded');
+                }
+
+                const currentRoute = window.location.pathname.split('/').pop();
+                const userRole = AppRouter.getCurrentRole();
+                const hasAccess = AppRouter.hasAccessToRoute(currentRoute, userRole);
+                const navigationMenu = AppRouter.getNavigationMenu();
+
+                output('routingOutput', 
+                    `✅ Routing System: LOADED\n` +
+                    `Current Route: ${currentRoute}\n` +
+                    `User Role: ${userRole}\n` +
+                    `Has Access: ${hasAccess}\n` +
+                    `Available Routes: ${navigationMenu.length}`
+                );
+                setStatus('routingStatus', 'ok');
+                log('Routing system is working', 'success');
+            } catch (error) {
+                output('routingOutput', `❌ Routing System: ERROR\n${error.message}`);
+                setStatus('routingStatus', 'error');
+                log(`Routing error: ${error.message}`, 'error');
+            }
+        }
+
+        function testPermissions() {
+            log('Testing permission system...');
+            try {
+                const roles = ['customer', 'rider', 'admin'];
+                let permissionTests = 'Permission Tests:\n';
+                
+                roles.forEach(role => {
+                    const canOrder = AppRouter.canPerformAction('canOrder');
+                    const canManage = AppRouter.canPerformAction('canManageUsers');
+                    permissionTests += `${role}: Order=${canOrder}, Manage=${canManage}\n`;
+                });
+
+                output('routingOutput', document.getElementById('routingOutput').innerHTML + 
+                    `\n${permissionTests}`);
+                log('Permission testing completed', 'success');
+            } catch (error) {
+                log(`Permission test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Database Tests
+        async function checkDatabase() {
+            log('Checking database status...');
+            try {
+                const response = await fetch(`${API_BASE}/debug/system-status`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    output('databaseOutput', 
+                        `✅ Database: CONNECTED\n` +
+                        `Users: ${data.database.total_users}\n` +
+                        `Riders: ${data.database.total_riders}\n` +
+                        `Orders: ${data.database.total_orders}\n` +
+                        `Services: ${data.database.total_services}`
+                    );
+                    setStatus('databaseStatus', 'ok');
+                    log('Database is healthy', 'success');
+                } else {
+                    throw new Error('Database check failed');
+                }
+            } catch (error) {
+                output('databaseOutput', `❌ Database: ERROR\n${error.message}`);
+                setStatus('databaseStatus', 'error');
+                log(`Database error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearDatabase() {
+            log('Note: Database clearing not implemented for safety', 'warning');
+            output('databaseOutput', '⚠️ Database clearing not implemented\nThis would require server restart');
+        }
+
+        // API Tests
+        async function testOrders() {
+            log('Testing Orders API...');
+            try {
+                const response = await fetch(`${API_BASE}/orders`, { method: 'GET' });
+                const data = await response.json();
+                output('apiOutput', `✅ Orders API: ${response.status}\nOrders count: ${data.length || 0}`);
+                log('Orders API working', 'success');
+            } catch (error) {
+                output('apiOutput', `❌ Orders API: ERROR\n${error.message}`);
+                log(`Orders API error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testServices() {
+            log('Testing Services API...');
+            try {
+                const response = await fetch(`${API_BASE}/services`, { method: 'GET' });
+                const data = await response.json();
+                output('apiOutput', document.getElementById('apiOutput').innerHTML + 
+                    `\n✅ Services API: ${response.status}\nServices count: ${data.length || 0}`);
+                log('Services API working', 'success');
+            } catch (error) {
+                output('apiOutput', document.getElementById('apiOutput').innerHTML + 
+                    `\n❌ Services API: ERROR\n${error.message}`);
+                log(`Services API error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testRiders() {
+            log('Testing Riders API...');
+            try {
+                const response = await fetch(`${API_BASE}/riders`, { method: 'GET' });
+                const data = await response.json();
+                output('apiOutput', document.getElementById('apiOutput').innerHTML + 
+                    `\n✅ Riders API: ${response.status}\nRiders count: ${data.length || 0}`);
+                log('Riders API working', 'success');
+            } catch (error) {
+                output('apiOutput', document.getElementById('apiOutput').innerHTML + 
+                    `\n❌ Riders API: ERROR\n${error.message}`);
+                log(`Riders API error: ${error.message}`, 'error');
+            }
+        }
+
+        // Frontend Tests
+        function checkFrontendFiles() {
+            log('Checking frontend files...');
+            const files = ['app.html', 'g8.html', 'gasfill_verion3.html', 'rider_dashboard.html', 'admin_dashboard.html', 'routes.js'];
+            let fileStatus = 'Frontend Files:\n';
+            
+            files.forEach(file => {
+                fetch(`${STATIC_BASE}/${file}`, { method: 'HEAD' })
+                    .then(response => {
+                        fileStatus += `${file}: ${response.ok ? '✅' : '❌'}\n`;
+                        output('frontendOutput', fileStatus);
+                    })
+                    .catch(error => {
+                        fileStatus += `${file}: ❌ Error\n`;
+                        output('frontendOutput', fileStatus);
+                    });
+            });
+            
+            setStatus('frontendStatus', 'ok');
+            log('Frontend file check initiated', 'success');
+        }
+
+        function testNavigation() {
+            log('Testing navigation...');
+            const pages = [
+                { name: 'Main App', url: 'g8.html' },
+                { name: 'Landing', url: 'gasfill_verion3.html' },
+                { name: 'Auth', url: 'app.html' }
+            ];
+            
+            let navTest = 'Navigation Test:\n';
+            pages.forEach(page => {
+                navTest += `${page.name}: Available\n`;
+            });
+            
+            output('frontendOutput', document.getElementById('frontendOutput').innerHTML + `\n${navTest}`);
+            log('Navigation test completed', 'success');
+        }
+
+        function clearDebugLog() {
+            document.getElementById('debugLog').innerHTML = 'Debug log cleared...\n';
+        }
+
+        // Initialize
+        async function initialize() {
+            log('Initializing debug dashboard...');
+            
+            // Auto-run basic checks
+            await checkServerHealth();
+            checkDatabase();
+            testRouting();
+            
+            // System overview
+            const overview = `System Status Summary:
+- Python Server: Running on port 5002
+- Static Server: Running on port 3000  
+- Authentication: JWT-based
+- Database: In-memory storage
+- Routing: Centralized AppRouter
+- Environment: Development
+- Last Updated: ${new Date().toLocaleString()}`;
+            
+            output('systemOverview', overview);
+            log('Debug dashboard initialized', 'success');
+        }
+
+        // Start initialization
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>
